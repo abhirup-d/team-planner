@@ -48,8 +48,17 @@ export async function GET() {
 
   // Fallback: read from CSV file
   const csvPath = path.join(process.cwd(), "public", "data", "activity_tracker.csv");
-  const stat = fs.statSync(csvPath);
   const csvText = fs.readFileSync(csvPath, "utf-8");
   const data = parseCSV(csvText);
-  return NextResponse.json({ ...data, lastUpdated: stat.mtime.toISOString() });
+
+  // Derive lastUpdated from the most recent lastEditedTime across all tasks
+  let latestEdit: string | null = null;
+  for (const t of data.tasks) {
+    if (t.lastEditedTime && (!latestEdit || t.lastEditedTime > latestEdit)) {
+      latestEdit = t.lastEditedTime;
+    }
+  }
+  const lastUpdated = latestEdit || new Date().toISOString();
+
+  return NextResponse.json({ ...data, lastUpdated });
 }
