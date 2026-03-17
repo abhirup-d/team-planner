@@ -1,0 +1,21 @@
+"use client";
+
+import useSWR from "swr";
+import type { ParsedData } from "@/lib/types";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export function useData() {
+  const { data, error, isLoading } = useSWR<ParsedData>("/api/data", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000,
+  });
+
+  return {
+    tasks: data?.tasks ?? [],
+    meta: data?.meta ?? { weekRange: [], persons: [], customers: [], statuses: [], taskTypes: [] },
+    lastUpdated: data?.lastUpdated ?? null,
+    isLoading,
+    error,
+  };
+}
