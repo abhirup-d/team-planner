@@ -9,6 +9,7 @@ export function useData() {
   const { data, error, isLoading } = useSWR<ParsedData>("/api/data", fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 60000,
+    refreshInterval: 3600000, // Re-fetch every hour
   });
 
   return {
