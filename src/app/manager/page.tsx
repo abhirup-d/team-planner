@@ -53,11 +53,9 @@ export default function ManagerPage() {
     if (value === "month") {
       const now = new Date();
       const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      const currentMonday = getWeekMonday(currentWeekKey);
-      const currentFriday = new Date(currentMonday.getTime());
-      currentFriday.setUTCDate(currentMonday.getUTCDate() + 4);
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setStartDate(firstOfMonth);
-      setEndDate(currentFriday.toISOString().split("T")[0]);
+      setEndDate(lastOfMonth.toISOString().split("T")[0]);
       return;
     }
     const n = parseInt(value);

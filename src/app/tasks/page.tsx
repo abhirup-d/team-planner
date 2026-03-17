@@ -80,7 +80,7 @@ function statusBadge(status: string) {
 export default function TasksPage() {
   const { tasks, meta, isLoading } = useData();
   const [search, setSearch] = useState("");
-  const [weekRange, setWeekRange] = useState("all");
+  const [weekRange, setWeekRange] = useState("month");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [personFilter, setPersonFilter] = useState("all");
@@ -137,8 +137,9 @@ export default function TasksPage() {
     if (value === "month") {
       const now = new Date();
       const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setStartDate(firstOfMonth);
-      setEndDate(now.toISOString().split("T")[0]);
+      setEndDate(lastOfMonth.toISOString().split("T")[0]);
       return;
     }
     if (value === "all") {

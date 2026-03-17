@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useData } from "@/hooks/use-data";
 
 const navItems = [
   { href: "/", label: "Overview", icon: Home },
@@ -23,13 +24,14 @@ const navItems = [
   { href: "/manager", label: "Manager Dashboard", icon: Shield },
   { href: "/clients", label: "Client Dashboard", icon: Building2 },
   { href: "/tasks", label: "Task View", icon: ListTodo },
-  { href: "/insights", label: "AI Insights", icon: Sparkles },
+  // { href: "/insights", label: "AI Insights", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { lastUpdated } = useData();
 
   return (
     <>
@@ -92,6 +94,12 @@ export function Sidebar() {
         <div className="p-4 mx-3 mb-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
           <p className="font-medium text-foreground/70">Oren Consulting</p>
           <p className="mt-0.5">5 team members</p>
+          {lastUpdated && (
+            <p className="mt-1.5 text-[10px] text-muted-foreground/70">
+              Last updated: {new Date(lastUpdated).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{" "}
+              {new Date(lastUpdated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
         </div>
       </aside>
     </>

@@ -8,24 +8,95 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StackedBarChart } from "@/components/charts/stacked-bar-chart";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   aggregateByWeek,
   aggregateByPersonWeek,
   aggregateByMonth,
   getCurrentWeekKPIs,
 } from "@/lib/data-aggregator";
 import { COLORS, CORE_TEAM, PERSON_COLORS } from "@/lib/constants";
+import { sortWeekKeys, getWeekMonday } from "@/lib/date-utils";
+import { DateRangePicker } from "@/components/date-range-picker";
 import { Clock, TrendingUp, DollarSign, AlertTriangle } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function HomePage() {
-  const { tasks, lastUpdated, isLoading } = useData();
+  const { tasks, isLoading } = useData();
   const { settings } = useSettings();
+  const [weekRange, setWeekRange] = useState("month");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  const weeklyTeam = useMemo(() => aggregateByWeek(tasks, settings), [tasks, settings]);
-  const weeklyPerson = useMemo(() => aggregateByPersonWeek(tasks, settings), [tasks, settings]);
+  const allWeekKeys = useMemo(() => {
+    return sortWeekKeys([...new Set(tasks.filter((t) => t.weekKey).map((t) => t.weekKey!))]);
+  }, [tasks]);
+
+  const syncDateRange = (value: string) => {
+    if (value === "month") {
+      const now = new Date();
+      const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setStartDate(firstOfMonth);
+      setEndDate(lastOfMonth.toISOString().split("T")[0]);
+      return;
+    }
+    if (value === "all") {
+      if (allWeekKeys.length === 0) return;
+      const firstMonday = getWeekMonday(allWeekKeys[0]);
+      const lastMonday = getWeekMonday(allWeekKeys[allWeekKeys.length - 1]);
+      const lastFriday = new Date(lastMonday.getTime());
+      lastFriday.setUTCDate(lastMonday.getUTCDate() + 4);
+      setStartDate(firstMonday.toISOString().split("T")[0]);
+      setEndDate(lastFriday.toISOString().split("T")[0]);
+      return;
+    }
+    const n = parseInt(value);
+    if (isNaN(n) || allWeekKeys.length === 0) return;
+    const recent = allWeekKeys.slice(-n);
+    const firstMonday = getWeekMonday(recent[0]);
+    const lastMonday = getWeekMonday(recent[recent.length - 1]);
+    const lastFriday = new Date(lastMonday.getTime());
+    lastFriday.setUTCDate(lastMonday.getUTCDate() + 4);
+    setStartDate(firstMonday.toISOString().split("T")[0]);
+    setEndDate(lastFriday.toISOString().split("T")[0]);
+  };
+
+  useEffect(() => {
+    if (allWeekKeys.length > 0 && !startDate && !endDate) {
+      syncDateRange(weekRange);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allWeekKeys]);
+
+  const filteredTasks = useMemo(() => {
+    if (startDate || endDate) {
+      return tasks.filter((t) => {
+        const d = t.effectiveDate;
+        if (!d) return false;
+        if (startDate && d < startDate) return false;
+        if (endDate && d > endDate) return false;
+        return true;
+      });
+    }
+    if (weekRange !== "all" && weekRange !== "month") {
+      const n = parseInt(weekRange);
+      const recentWeeks = new Set(allWeekKeys.slice(-n));
+      return tasks.filter((t) => t.weekKey && recentWeeks.has(t.weekKey));
+    }
+    return tasks;
+  }, [tasks, startDate, endDate, weekRange, allWeekKeys]);
+
+  const weeklyTeam = useMemo(() => aggregateByWeek(filteredTasks, settings), [filteredTasks, settings]);
+  const weeklyPerson = useMemo(() => aggregateByPersonWeek(filteredTasks, settings), [filteredTasks, settings]);
   const kpis = useMemo(() => getCurrentWeekKPIs(weeklyTeam, weeklyPerson), [weeklyTeam, weeklyPerson]);
 
-  const monthlyData = useMemo(() => aggregateByMonth(tasks), [tasks]);
+  const monthlyData = useMemo(() => aggregateByMonth(filteredTasks), [filteredTasks]);
 
   const monthlyChartData = useMemo(() => {
     return monthlyData.map((m) => {
@@ -52,17 +123,29 @@ export default function HomePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
-        <Header
-          title="Overview"
-          description="Team resource utilisation at a glance"
+      <Header
+        title="Overview"
+        description="Team resource utilisation at a glance"
+      />
+
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <span className="text-sm text-muted-foreground">Show</span>
+        <Select value={weekRange} onValueChange={(v) => { if (v) { setWeekRange(v); syncDateRange(v); } }}>
+          <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">This month</SelectItem>
+            <SelectItem value="1">1 week</SelectItem>
+            <SelectItem value="8">8 weeks</SelectItem>
+            <SelectItem value="12">12 weeks</SelectItem>
+            <SelectItem value="all">All time</SelectItem>
+          </SelectContent>
+        </Select>
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartChange={setStartDate}
+          onEndChange={setEndDate}
         />
-        {lastUpdated && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Last updated: {new Date(lastUpdated).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{" "}
-            {new Date(lastUpdated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -144,19 +227,19 @@ export default function HomePage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total tasks</span>
-              <span className="font-medium">{tasks.length}</span>
+              <span className="font-medium">{filteredTasks.length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Completed tasks</span>
-              <span className="font-medium">{tasks.filter((t) => t.status === "Completed").length}</span>
+              <span className="font-medium">{filteredTasks.filter((t) => t.status === "Completed").length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">In progress</span>
-              <span className="font-medium">{tasks.filter((t) => t.status === "In process").length}</span>
+              <span className="font-medium">{filteredTasks.filter((t) => t.status === "In process").length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Yet to start</span>
-              <span className="font-medium">{tasks.filter((t) => t.status === "Yet to start").length}</span>
+              <span className="font-medium">{filteredTasks.filter((t) => t.status === "Yet to start").length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Weeks tracked</span>

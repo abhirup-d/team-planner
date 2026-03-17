@@ -23,7 +23,7 @@ import { DateRangePicker } from "@/components/date-range-picker";
 export default function WeeklyPage() {
   const { tasks, isLoading } = useData();
   const { settings } = useSettings();
-  const [weekRange, setWeekRange] = useState("12");
+  const [weekRange, setWeekRange] = useState("month");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -52,8 +52,9 @@ export default function WeeklyPage() {
     if (value === "month") {
       const now = new Date();
       const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       setStartDate(firstOfMonth);
-      setEndDate(now.toISOString().split("T")[0]);
+      setEndDate(lastOfMonth.toISOString().split("T")[0]);
       return;
     }
     const n = parseInt(value);
