@@ -31,7 +31,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { lastUpdated } = useData();
+  const { lastUpdated, source } = useData();
 
   return (
     <>
@@ -98,6 +98,12 @@ export function Sidebar() {
             <p className="mt-1.5 text-[10px] text-muted-foreground/70">
               Last updated: {new Date(lastUpdated).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}{" "}
               {new Date(lastUpdated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
+          {source && (
+            <p className={cn("mt-1 text-[10px] flex items-center gap-1", source === "slack" ? "text-green-500" : "text-orange-400")}>
+              <span className={cn("inline-block h-1.5 w-1.5 rounded-full", source === "slack" ? "bg-green-500" : "bg-orange-400")} />
+              {source === "slack" ? "Live from Slack" : "CSV fallback"}
             </p>
           )}
         </div>

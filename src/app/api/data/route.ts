@@ -33,23 +33,28 @@ export async function GET() {
   // If Slack token is configured, fetch live data from Slack
   if (process.env.SLACK_BOT_TOKEN) {
     try {
+      console.log("[data] Fetching from Slack...");
       const rawTasks = await fetchActivityTracker(1000);
       const allTasks: Task[] = [];
       for (const raw of rawTasks) {
         allTasks.push(...enrichTask(raw));
       }
       const meta = buildMeta(allTasks);
-      return NextResponse.json({ tasks: allTasks, meta, lastUpdated: new Date().toISOString() });
+      console.log(`[data] Slack: ${allTasks.length} tasks loaded`);
+      return NextResponse.json({ tasks: allTasks, meta, lastUpdated: new Date().toISOString(), source: "slack" });
     } catch (err) {
-      console.error("Slack API fetch failed, falling back to CSV:", err);
+      console.error("[data] Slack API fetch failed, falling back to CSV:", err);
       // Fall through to CSV
     }
+  } else {
+    console.log("[data] No SLACK_BOT_TOKEN set, using CSV fallback");
   }
 
   // Fallback: read from CSV file
+  console.log("[data] Loading from CSV file");
   const csvPath = path.join(process.cwd(), "public", "data", "activity_tracker.csv");
   const csvText = fs.readFileSync(csvPath, "utf-8");
   const data = parseCSV(csvText);
 
-  return NextResponse.json({ ...data, lastUpdated: new Date().toISOString() });
+  return NextResponse.json({ ...data, lastUpdated: new Date().toISOString(), source: "csv" });
 }
