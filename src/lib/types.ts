@@ -104,4 +104,5 @@ export interface ParsedData {
   tasks: Task[];
   meta: DataMeta;
   lastUpdated: string;
+  source?: string;
 }

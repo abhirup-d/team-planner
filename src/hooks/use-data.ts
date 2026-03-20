@@ -16,7 +16,7 @@ export function useData() {
     tasks: data?.tasks ?? [],
     meta: data?.meta ?? { weekRange: [], persons: [], customers: [], statuses: [], taskTypes: [] },
     lastUpdated: data?.lastUpdated ?? null,
-    source: (data as Record<string, unknown>)?.source as string | undefined ?? undefined,
+    source: data?.source,
     isLoading,
     error,
   };
