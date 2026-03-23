@@ -13,6 +13,7 @@ import {
   BarChart3,
   Menu,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { lastUpdated, source } = useData();
+  const { lastUpdated, source, isRefreshing, refresh } = useData();
 
   return (
     <>
@@ -92,7 +93,17 @@ export function Sidebar() {
         </nav>
 
         <div className="p-4 mx-3 mb-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground/70">Oren Consulting</p>
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-foreground/70">Oren Consulting</p>
+            <button
+              onClick={() => refresh()}
+              disabled={isRefreshing}
+              title="Refresh data from Slack"
+              className="p-1 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-3 w-3", isRefreshing && "animate-spin")} />
+            </button>
+          </div>
           <p className="mt-0.5">5 team members</p>
           {lastUpdated && (
             <p className="mt-1.5 text-[10px] text-muted-foreground/70">
