@@ -32,7 +32,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { lastUpdated, source, isRefreshing, refresh } = useData();
+  const { lastUpdated, isRefreshing, refresh } = useData();
 
   return (
     <>
@@ -111,12 +111,10 @@ export function Sidebar() {
               {new Date(lastUpdated).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
             </p>
           )}
-          {source && (
-            <p className={cn("mt-1 text-[10px] flex items-center gap-1", source === "slack" ? "text-green-500" : "text-orange-400")}>
-              <span className={cn("inline-block h-1.5 w-1.5 rounded-full", source === "slack" ? "bg-green-500" : "bg-orange-400")} />
-              {source === "slack" ? "Live from Slack" : "CSV fallback"}
-            </p>
-          )}
+          <p className="mt-1 text-[10px] flex items-center gap-1 text-green-500">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+            Live from Slack
+          </p>
         </div>
       </aside>
     </>

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { parseCSV, enrichTask } from "@/lib/csv-parser";
+import { enrichTask } from "@/lib/csv-parser";
 import { fetchActivityTracker } from "@/lib/slack-client";
 import type { Task, DataMeta } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 function buildMeta(tasks: Task[]): DataMeta {
   const weekKeys = new Set<string>();
@@ -30,31 +30,28 @@ function buildMeta(tasks: Task[]): DataMeta {
 }
 
 export async function GET() {
-  // If Slack token is configured, fetch live data from Slack
-  if (process.env.SLACK_BOT_TOKEN) {
-    try {
-      console.log("[data] Fetching from Slack...");
-      const rawTasks = await fetchActivityTracker(1000);
-      const allTasks: Task[] = [];
-      for (const raw of rawTasks) {
-        allTasks.push(...enrichTask(raw));
-      }
-      const meta = buildMeta(allTasks);
-      console.log(`[data] Slack: ${allTasks.length} tasks loaded`);
-      return NextResponse.json({ tasks: allTasks, meta, lastUpdated: new Date().toISOString(), source: "slack" });
-    } catch (err) {
-      console.error("[data] Slack API fetch failed, falling back to CSV:", err);
-      // Fall through to CSV
-    }
-  } else {
-    console.log("[data] No SLACK_BOT_TOKEN set, using CSV fallback");
+  if (!process.env.SLACK_BOT_TOKEN) {
+    return NextResponse.json(
+      { error: "SLACK_BOT_TOKEN is not configured" },
+      { status: 500 }
+    );
   }
 
-  // Fallback: read from CSV file
-  console.log("[data] Loading from CSV file");
-  const csvPath = path.join(process.cwd(), "public", "data", "activity_tracker.csv");
-  const csvText = fs.readFileSync(csvPath, "utf-8");
-  const data = parseCSV(csvText);
-
-  return NextResponse.json({ ...data, lastUpdated: new Date().toISOString(), source: "csv" });
+  try {
+    console.log("[data] Fetching from Slack...");
+    const rawTasks = await fetchActivityTracker(1000);
+    const allTasks: Task[] = [];
+    for (const raw of rawTasks) {
+      allTasks.push(...enrichTask(raw));
+    }
+    const meta = buildMeta(allTasks);
+    console.log(`[data] Slack: ${allTasks.length} tasks loaded`);
+    return NextResponse.json({ tasks: allTasks, meta, lastUpdated: new Date().toISOString() });
+  } catch (err) {
+    console.error("[data] Slack API fetch failed:", err);
+    return NextResponse.json(
+      { error: `Slack API fetch failed: ${err instanceof Error ? err.message : String(err)}` },
+      { status: 500 }
+    );
+  }
 }

@@ -161,9 +161,9 @@ async function slackApi(method: string, body?: Record<string, unknown>): Promise
   let res: Response;
   if (body) {
     headers["Content-Type"] = "application/json; charset=utf-8";
-    res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
+    res = await fetch(url, { method: "POST", headers, body: JSON.stringify(body), cache: "no-store" });
   } else {
-    res = await fetch(url, { headers });
+    res = await fetch(url, { headers, cache: "no-store" });
   }
 
   const data = await res.json();

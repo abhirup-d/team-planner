@@ -16,7 +16,6 @@ export function useData() {
     tasks: data?.tasks ?? [],
     meta: data?.meta ?? { weekRange: [], persons: [], customers: [], statuses: [], taskTypes: [] },
     lastUpdated: data?.lastUpdated ?? null,
-    source: data?.source,
     isLoading,
     isRefreshing: isValidating && !isLoading,
     refresh: () => mutate(),
