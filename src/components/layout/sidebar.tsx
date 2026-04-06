@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   RefreshCw,
+  Clock,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/manager", label: "Manager Dashboard", icon: Shield },
   { href: "/clients", label: "Client Dashboard", icon: Building2 },
   { href: "/tasks", label: "Task View", icon: ListTodo },
+  { href: "/otd", label: "On-time Delivery", icon: Clock },
   // { href: "/insights", label: "AI Insights", icon: Sparkles },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
