@@ -162,11 +162,65 @@ function progressClass(rate: number): string {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function getCurrentYear(): string {
+  return String(new Date().getFullYear());
+}
+
+function getCurrentMonthNum(): string {
+  return String(new Date().getMonth() + 1).padStart(2, "0");
+}
+
 export default function OtdPage() {
   const { tasks, isLoading } = useData();
-  const [monthFilter, setMonthFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState(getCurrentYear);
+  const [monthNumFilter, setMonthNumFilter] = useState(getCurrentMonthNum);
 
-  // Get all unique months from due dates
+  // Derive combined monthFilter key (e.g. "2026-04") from year + month selects
+  const monthFilter = useMemo(() => {
+    if (yearFilter === "all") return "all";
+    if (monthNumFilter === "all") return yearFilter; // year-only filter
+    return `${yearFilter}-${monthNumFilter}`;
+  }, [yearFilter, monthNumFilter]);
+
+  // Available years: 2025 to current year (auto-adds next year when it starts)
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years: number[] = [];
+    for (let y = 2025; y <= currentYear; y++) years.push(y);
+    return years;
+  }, []);
+
+  // Available months for the selected year
+  const availableMonthNums = useMemo(() => {
+    if (yearFilter === "all") return [];
+    const year = parseInt(yearFilter);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 1-based
+    const maxMonth = year === currentYear ? currentMonth : 12;
+    const months: { value: string; label: string }[] = [];
+    for (let m = 1; m <= maxMonth; m++) {
+      months.push({
+        value: String(m).padStart(2, "0"),
+        label: MONTH_NAMES[m - 1],
+      });
+    }
+    return months;
+  }, [yearFilter]);
+
+  // Reset month when year changes
+  const handleYearChange = (v: string | null) => {
+    if (!v) return;
+    setYearFilter(v);
+    setMonthNumFilter("all");
+  };
+
+  // Get all unique months from due dates (used for prev month comparison)
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
     for (const t of tasks) {
@@ -176,18 +230,25 @@ export default function OtdPage() {
     return [...months].sort().reverse();
   }, [tasks]);
 
-  // Filter tasks by selected month (based on due date)
+  // Filter tasks by selected year/month (based on due date)
   const filteredTasks = useMemo(() => {
     if (monthFilter === "all") return tasks;
-    return tasks.filter((t) => getMonthKeyFromDate(t.dueDate) === monthFilter);
+    return tasks.filter((t) => {
+      const mk = getMonthKeyFromDate(t.dueDate);
+      if (!mk) return false;
+      // Year-only filter (e.g. "2026") matches all months in that year
+      if (monthFilter.length === 4) return mk.startsWith(monthFilter);
+      // Full month filter (e.g. "2026-04")
+      return mk === monthFilter;
+    });
   }, [tasks, monthFilter]);
 
   // Overall KPIs
   const stats = useMemo(() => computeOtd(filteredTasks), [filteredTasks]);
 
-  // Previous month comparison
+  // Previous month comparison (only when a specific month is selected)
   const prevMonthDelta = useMemo(() => {
-    if (monthFilter === "all" || availableMonths.length < 2) return null;
+    if (monthFilter === "all" || monthFilter.length === 4 || availableMonths.length < 2) return null;
     const idx = availableMonths.indexOf(monthFilter);
     if (idx < 0 || idx >= availableMonths.length - 1) return null;
     const prevKey = availableMonths[idx + 1];
@@ -255,6 +316,12 @@ export default function OtdPage() {
       .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
   }, [filteredTasks]);
 
+  const monthLabel = monthFilter === "all"
+    ? "All Months"
+    : monthFilter.length === 4
+      ? monthFilter
+      : formatMonthLabel(monthFilter);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -263,8 +330,6 @@ export default function OtdPage() {
     );
   }
 
-  const monthLabel = monthFilter === "all" ? "All Months" : formatMonthLabel(monthFilter);
-
   return (
     <div>
       <Header
@@ -272,28 +337,45 @@ export default function OtdPage() {
         description="Tasks grouped by due date month"
       />
 
-      {/* Month Filter */}
+      {/* Year + Month Filter */}
       <Card className="p-4 mb-6">
         <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Year</span>
+          <Select
+            value={yearFilter}
+            onValueChange={handleYearChange}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Years</SelectItem>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span className="text-sm font-medium text-muted-foreground">Month</span>
           <Select
-            value={monthFilter}
-            onValueChange={(v) => { if (v) setMonthFilter(v); }}
+            value={monthNumFilter}
+            onValueChange={(v) => { if (v) setMonthNumFilter(v); }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Months</SelectItem>
-              {availableMonths.map((mk) => (
-                <SelectItem key={mk} value={mk}>
-                  {formatMonthLabel(mk)}
+              {availableMonthNums.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <span className="text-xs text-muted-foreground ml-auto">
-            Filters by due date month &mdash; KPIs, person &amp; client tables all update
+            Filters by due date &mdash; KPIs, person &amp; client tables all update
           </span>
         </div>
       </Card>
